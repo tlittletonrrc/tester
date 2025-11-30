@@ -36,11 +36,11 @@ def lambda_handler(event, context):
         }
 
     try:
-        response = table.query(
-            KeyConditionExpression=Key("PK").eq(pk_value)
-        )
-        items = response.get("Items", [])
+        items = []
+        response = table.query(KeyConditionExpression=Key("PK").eq(pk_value))
+        items.extend(response.get("Items", []))
 
+        # Correct pagination: iterate pages properly
         while "LastEvaluatedKey" in response:
             response = table.query(
                 KeyConditionExpression=Key("PK").eq(pk_value),
@@ -51,9 +51,7 @@ def lambda_handler(event, context):
         items = convert_decimals(items)
 
     except ClientError as err:
-        error_message = (
-            err.response.get("Error", {}).get("Message", "Unknown error")
-        )
+        error_message = err.response.get("Error", {}).get("Message", "Unknown error")
         print(f"Query failed: {error_message}")
         return {
             "statusCode": 500,
