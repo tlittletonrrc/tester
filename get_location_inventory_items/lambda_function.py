@@ -8,6 +8,7 @@ from botocore.exceptions import ClientError
 dynamodb = boto3.resource("dynamodb")
 TABLE_NAME = "Inventory"
 
+
 def convert_decimals(obj):
     """Convert DynamoDB Decimal types to native int/float."""
     if isinstance(obj, list):
