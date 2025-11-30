@@ -33,9 +33,7 @@ def lambda_handler(event, context):
 
     try:
         items = []
-        response = table.query(
-            KeyConditionExpression=Key("PK").eq(pk_value)
-        )
+        response = table.query(KeyConditionExpression=Key("PK").eq(pk_value))
         items.extend(response.get("Items", []))
 
         # Handle pagination
