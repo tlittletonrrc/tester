@@ -16,8 +16,7 @@ def lambda_handler(event, context):
         # Handle pagination (if scan returns more than 1MB of data)
         while "LastEvaluatedKey" in response:
             response = dynamo_client.scan(
-                TableName=table_name,
-                ExclusiveStartKey=response["LastEvaluatedKey"]
+                TableName=table_name, ExclusiveStartKey=response["LastEvaluatedKey"]
             )
             items.extend(response.get("Items", []))
 
