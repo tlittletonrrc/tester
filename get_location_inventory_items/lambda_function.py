@@ -5,68 +5,41 @@ import boto3
 from boto3.dynamodb.conditions import Key
 from botocore.exceptions import ClientError
 
+# Initialize the DynamoDB client
 dynamodb = boto3.resource("dynamodb")
+
+# Define the DynamoDB table name
 TABLE_NAME = "Inventory"
 
 
+# Function to convert Decimal to int/float
 def convert_decimals(obj):
-    """Convert DynamoDB Decimal types to native int/float."""
     if isinstance(obj, list):
         return [convert_decimals(i) for i in obj]
-    if isinstance(obj, dict):
+    elif isinstance(obj, dict):
         return {k: convert_decimals(v) for k, v in obj.items()}
-    if isinstance(obj, Decimal):
+    elif isinstance(obj, Decimal):
         return int(obj) if obj % 1 == 0 else float(obj)
     return obj
 
 
 def lambda_handler(event, context):
-    """Lambda entry point."""
     table = dynamodb.Table(TABLE_NAME)
 
-    pk_value = event.get("pathParameters", {}).get("location")
-    if not pk_value:
-        return {
-            "statusCode": 400,
-            "headers": {
-                "Content-Type": "application/json",
-                "Access-Control-Allow-Origin": "*",
-            },
-            "body": json.dumps({"error": "Missing 'location' path parameter"}),
-        }
-
     try:
-        items = []
-        response = table.query(KeyConditionExpression=Key("PK").eq(pk_value))
-        items.extend(response.get("Items", []))
-
-        # Correct pagination: iterate pages properly
-        while "LastEvaluatedKey" in response:
-            response = table.query(
-                KeyConditionExpression=Key("PK").eq(pk_value),
-                ExclusiveStartKey=response["LastEvaluatedKey"],
-            )
-            items.extend(response.get("Items", []))
+        # Query to get all items with PK = "Location1"
+        response = table.query(KeyConditionExpression=Key("PK").eq("Location1"))
+        items = response.get("Items", [])
 
         items = convert_decimals(items)
-
-    except ClientError as err:
-        error_message = err.response.get("Error", {}).get("Message", "Unknown error")
-        print(f"Query failed: {error_message}")
+    except ClientError as e:
+        print(f"Failed to query items: {e.response['Error']['Message']}")
         return {
             "statusCode": 500,
-            "headers": {
-                "Content-Type": "application/json",
-                "Access-Control-Allow-Origin": "*",
-            },
-            "body": json.dumps({"error": error_message}),
+            "body": json.dumps("Failed to query items"),
         }
 
     return {
         "statusCode": 200,
-        "headers": {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",
-        },
         "body": json.dumps(items),
     }

@@ -4,60 +4,42 @@ from decimal import Decimal
 import boto3
 
 
-def decimal_to_json(obj):
-    if isinstance(obj, Decimal):
-        return float(obj) if obj % 1 != 0 else int(obj)
-    raise TypeError
-
-
 def lambda_handler(event, context):
-    dynamodb = boto3.resource("dynamodb")
-    table = dynamodb.Table("Inventory")
+    # DynamoDB setup
+    dynamo_client = boto3.client("dynamodb")
+    table_name = "Inventory"
 
-    # Extract path parameter
-    key_value = event.get("pathParameters", {}).get("id")
-    if not key_value:
+    # Get the key from the path parameters
+    if "pathParameters" not in event or "id" not in event["pathParameters"]:
         return {
             "statusCode": 400,
-            "headers": {
-                "Content-Type": "application/json",
-                "Access-Control-Allow-Origin": "*",
-            },
-            "body": json.dumps({"error": "Missing 'id' path parameter"}),
+            "body": json.dumps("Missing 'id' path parameter"),
         }
 
+    key_value = event["pathParameters"]["id"]
+
+    # Prepare the key for DynamoDB
+    key = {"_id": {"S": key_value}}
+
+    # Get the item from the table
     try:
-        # Query item using the primary key _id
-        response = table.get_item(Key={"_id": key_value})
-        item = response.get("Item")
+        response = dynamo_client.get_item(TableName=table_name, Key=key)
+        item = response.get("Item", {})
 
         if not item:
             return {
                 "statusCode": 404,
-                "headers": {
-                    "Content-Type": "application/json",
-                    "Access-Control-Allow-Origin": "*",
-                },
-                "body": json.dumps({"error": "Item not found"}),
+                "body": json.dumps("Item not found"),
             }
 
-        # Successful return
         return {
             "statusCode": 200,
-            "headers": {
-                "Content-Type": "application/json",
-                "Access-Control-Allow-Origin": "*",
-            },
-            "body": json.dumps(item, default=decimal_to_json),
+            "body": json.dumps(item, default=str),
         }
 
     except Exception as e:
-        print(f"Error: {str(e)}")
+        print(e)
         return {
             "statusCode": 500,
-            "headers": {
-                "Content-Type": "application/json",
-                "Access-Control-Allow-Origin": "*",
-            },
-            "body": json.dumps({"error": "Internal Server Error"}),
+            "body": json.dumps(str(e)),
         }
