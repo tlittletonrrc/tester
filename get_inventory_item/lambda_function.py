@@ -1,6 +1,7 @@
-import boto3
 import json
 from decimal import Decimal
+
+import boto3
 
 
 def decimal_to_json(obj):
